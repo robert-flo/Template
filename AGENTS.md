@@ -316,24 +316,32 @@ This is the official main flow of the Matt Pocock skills (per `ask-matt`'s routi
               │                    YES ────┘                          NO
               │                     │                                  │
               │              Keep grilling                             ▼
-              │              (same context)                         /to-spec
+              │              (same context                        /to-spec
+              │               window — no                              │
+              │               /compact yet)                            ▼
+              │                                          Multi-session build?
+              │                                       (per ask-matt, NOT "how
+              │                                        many files touched")
               │                                                        │
-              │                                                        ▼
-              │                                                   /to-tickets
-              │                                                        │
-              │                                                        ▼
-              │                                                   /implement
-              │                                                  (fresh context each,
-              │                                                   via /handoff if needed)
-              └────────────────────┬───────────────────────────────────┘
-                                   ▼
-                             /code-review
+              │                                        ┌───────────────┴───────────────┐
+              │                                        ▼                               ▼
+              │                                       NO                              YES
+              │                                        │                               │
+              │                                        ▼                               ▼
+              │                                  /implement                     /to-tickets
+              │                                  (same context                        │
+              │                                   window)                    /implement per ticket
+              │                                        │                    (fresh context each,
+              │                                        │                     via /handoff if needed)
+              └────────────────────┬───────────────────┴───────────────────────────────┘
+                              ▼
+                       /code-review
                           (Standards + Spec)
-                                   │
-                                   ▼
-                      Commit → push → PR into `master`
-                   (never direct commits — see
-                    "Branching & Release Policy")
+                                    │
+                                    ▼
+                       Commit → push → PR into `master`
+                    (never direct commits — see
+                     "Branching & Release Policy")
 ```
 
 ### On-ramps

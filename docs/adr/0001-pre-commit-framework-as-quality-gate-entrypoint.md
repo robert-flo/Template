@@ -11,5 +11,5 @@ The repository had two complementary but unintegrated pre-commit halves: a custo
 
 ## Consequences
 
-- Escape hatches, bootstrap, and docs must be described in framework terms (plus any RaVN-specific shell overrides), not as two independent hook install paths.
-- The custom shell script remains valuable for RaVN-specific behavior; it is not replaced by the framework, only *invoked under* it.
+- Escape hatches, bootstrap, and docs must be described in framework terms (plus any project-specific shell overrides), not as two independent hook install paths.
+- The custom shell script remains valuable for project-specific behavior; it is not replaced by the framework, only *invoked under* it.

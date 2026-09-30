@@ -1,6 +1,6 @@
-# RaVN Dotfiles
+# Domain Glossary — Bash Project Template
 
-Domain language for the RaVN Arch Linux utility/dotfiles repository — quality gates, configuration tracking, and agent workflow vocabulary that are specific to this project.
+Domain language for the Bash project template repository — quality gates, development hygiene, and agent workflow vocabulary that are specific to this project.
 
 ## Language
 
@@ -11,7 +11,7 @@ The full set of automated checks that must pass before a commit is accepted, own
 _Avoid_: pre-commit hooks (ambiguous), linters, CI (CI may re-run the same gate but is not the gate itself)
 
 **Shell Quality Gate**:
-The shell-specific portion of the Quality Gate: format, lint, and RaVN shell rules for staged shell files only.
+The shell-specific portion of the Quality Gate: format, lint, and shell quality rules for staged shell files only.
 _Avoid_: shell hook, bash lint (when referring to the whole gate), community shell hooks (as the primary implementation), exclusion allowlists for “legacy” shell
 
 **Shell Failure Report**:

@@ -13,7 +13,7 @@
 # Domains:
 #   - File Hygiene Gate
 #   - Doc Quality Gate (Strict Doc Profile; non-Docker markdownlint-cli2)
-#   - Shell Quality Gate (RaVN local hook: .git-hooks/ravn-shell-quality)
+#   - Shell Quality Gate (local hook: .git-hooks/ravn-shell-quality)
 #
 # Node is pinned so pre-commit does not use system npm (npm 12+ rejects
 # flags that older pre-commit node env install paths still pass).
@@ -53,7 +53,7 @@ repos:
         # Local Agent Tree is gitignored; optional defense in depth for force-adds.
         exclude: ^\.agents/
 
-      # Shell Quality Gate: RaVN-owned script discovers staged shell itself.
+      # Shell Quality Gate: local script discovers staged shell itself.
       - id: ravn-shell-quality
         name: ravn-shell-quality
         language: system

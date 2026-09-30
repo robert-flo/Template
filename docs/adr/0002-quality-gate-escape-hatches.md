@@ -14,4 +14,4 @@ We adopt **two explicit levels**, both standard:
 - **Two standard levels (chosen)** — no custom wrapper; honest semantics; small doc/agent migration.
 - **Keep `SKIP_HOOKS=1` = shell only** — least code change; high confusion risk.
 - **Custom wrapper so `SKIP_HOOKS=1` skips everything** — preserves old muscle memory; reintroduces a non-framework Entrypoint path.
-- **Framework-only docs, drop any RaVN-specific story** — same as chosen, but without naming Full vs Selective in the domain language.
+- **Framework-only docs, drop any project-specific story** — same as chosen, but without naming Full vs Selective in the domain language.

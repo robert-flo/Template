@@ -18,9 +18,9 @@ this map whenever an in-scope file is added, removed, or changes purpose.
 | `AGENTS.md` | Gives contributors and coding agents the repository workflow, safety, and quality rules. |
 | `CHANGELOG.md` | Records released user-visible changes and is maintained by Release Please. |
 | `COMMIT_MESSAGE_GUIDELINES.md` | Defines the Conventional Commit and Gitmoji conventions that feed release automation. |
-| `CONTEXT.md` | Records shared domain vocabulary and architectural context for ongoing work. |
 | `CONTRIBUTING.md` | Explains how to contribute safely, consistently, and through pull requests. |
 | `Dockerfile` | Provides a clean container environment for template verification. |
+| `GLOSSARY.md` | Records shared domain vocabulary and architectural context for ongoing work. |
 | `LICENSE` | States the legal terms under which the template can be used and redistributed. |
 | `Makefile` | Composes the focused `make/` modules into the public command interface. |
 | `README.md` | Introduces the template and routes users to setup, commands, and policies. |

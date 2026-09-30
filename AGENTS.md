@@ -265,7 +265,7 @@ This is the official main flow of the Matt Pocock skills (per `ask-matt`'s routi
 
 | Step | Command            | Purpose                                                                                                                                    | Exit Gate                                           |
 | :--: | :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------- |
-|  1   | `/grill-with-docs` | A relentless interview to sharpen a plan or design, writing resolved terms to `CONTEXT.md` and hard decisions as ADRs as it goes.          | Design ambiguities resolved; glossary/ADRs updated. |
+|  1   | `/grill-with-docs` | A relentless interview to sharpen a plan or design, writing resolved terms to `GLOSSARY.md` and hard decisions as ADRs as it goes.          | Design ambiguities resolved; glossary/ADRs updated. |
 |  2   | `/to-spec`         | Synthesize the current conversation into a spec (no re-interviewing) and publish it to the issue tracker with the `ready-for-agent` label. | Spec published to the tracker.                      |
 |  3   | `/to-tickets`      | Break the spec/conversation into tracer-bullet tickets, each declaring its blocking edges, published to the tracker.                       | Atomic ticket set with blocking edges published.    |
 |  4   | `/implement`       | Implement a piece of work from a spec or ticket, driving `/tdd` internally at agreed seams. Runs typechecking and tests regularly.         | Working code, tests passing. No "vibe coding."      |

@@ -191,12 +191,17 @@ make format
 
 ### Issue completion cleanup
 
-After an issue is merged successfully into the base branch from which its
-worktree was created, the agent must verify that the issue is closed and then
-ask the user for explicit authorization before removing anything. With that
-authorization, remove the obsolete local and remote topic branch and remove
-the local issue worktree. Do not delete the base branch or its worktree, and do
-not perform cleanup after a failed, partial, or unverified merge.
+After an issue or pull request is merged successfully into the base branch
+from which its worktree was created, the agent must verify that the merge is
+confirmed and the issue/PR is closed. The agent then automatically removes the
+obsolete local and remote topic branch and removes the local issue worktree to
+keep the repository clean.
+
+Strict safety constraints:
+
+- Do not perform cleanup after a failed, partial, or unverified merge.
+- Never delete `master`, the base integration branch, or its worktree.
+- Report all removed branches and worktrees in the final handoff summary.
 
 To protect the user's active development tree from accidental resets or uncommitted code loss during development, and to maintain strict task isolation:
 
@@ -378,5 +383,5 @@ This is the official main flow of the Matt Pocock skills (per `ask-matt`'s routi
 1. **Run `/code-review`** against the fixed point where the worktree branched off, using the standard review framing (see "Task Planning & Skills Workflow" § The Main Build Chain) — Standards + Spec review. Resolve any Blocker/Major findings before proceeding.
 2. **Commit, push, and open a Pull Request**: format commits using Conventional Commits, push the topic branch to the remote, and open a PR targeting `master` (see "Branching & Release Policy"). `master` must never receive direct commits.
 3. **Synchronize the base worktree** after the PR merges, then verify the merged result and its clean status.
-4. **Clean up only after the merge is confirmed**: verify that the issue is closed on GitHub, and ask the user for explicit authorization before removing anything. Once authorized, remove the local and remote topic branch and delete the isolated worktree. Never delete `master`, the base branch, or unmerged work.
+4. **Clean up automatically once the merge is confirmed**: verify that the issue/PR is closed on GitHub. Automatically remove the obsolete local and remote topic branch, and delete the isolated worktree to prevent cluttering the repository. Never delete `master`, the base branch, or unmerged work.
 5. **Give the user manual validation instructions**: explain the exact commands or steps to test the completed change. Then report that the base branch is ready for the next issue. Do not silently start the next issue in the same handoff.

@@ -1,26 +1,45 @@
+# AGENTS.md — Bash Project Template
+
+## Table of Contents
+
+1. [Repository Structure & Purpose](#repository-structure--purpose)
+2. [Style](#style)
+3. [Error Handling](#error-handling)
+4. [ShellCheck & Scripting Safety](#shellcheck--scripting-safety)
+5. [Verification](#verification)
+6. [Git Worktree Workflow (Development)](#git-worktree-workflow-development)
+7. [Branching & Release Policy](#branching--release-policy)
+8. [Task Planning & Skills Workflow (Matt Pocock Skills)](#task-planning--skills-workflow-matt-pocock-skills)
+9. [Task Execution Workflow](#task-execution-workflow)
+
+---
+
 ## Agent skills
 
 ### Issue tracker
 
-GitHub Issues using the `gh` CLI. See `docs/agents/issue-tracker.md`.
+GitHub Issues via `gh` CLI. External PRs are not triaged. See `docs/agents/issue-tracker.md`.
+When creating or renaming an issue, prefix its title with the issue number and a
+separator: `<number> - <descriptive title>` (for example, `51 - Migrate legacy
+Codex CLI task to canonical mise lifecycle`).
 
 ### Triage labels
 
-Default five-role vocabulary. See `docs/agents/triage-labels.md`.
+Default vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context — one `CONTEXT.md` plus `docs/adr/` at the repository root. See
-`docs/agents/domain.md`.
+Single-context repo (`GLOSSARY.md` + `docs/adr/` at repo root). See `docs/agents/domain.md`.
 
 ### Pull request history
 
-- Keep each pull-request branch linear and create one merge commit into `master`.
-- Before merging, rebase the branch onto `origin/master`; do not merge `master`
-  into the branch.
-- After a rebase, update the remote branch only with `git push --force-with-lease`.
-- If an automated branch cannot be safely rebased, recreate it from
-  `origin/master` before merging.
+Recent squashed PR history lives in `.github/pr-history.md` (updated at release /
+squash time). When researching past decisions or why a change was made:
+
+1. Check `.github/pr-history.md` first — each entry has the squash commit hash,
+   PR number, title, and full body with context.
+2. If more detail is needed, use `gh pr view <number>` to read the full review
+   thread, or `git log -S <symbol>` to trace code churn.
 
 ### Embedded code by the User
 
@@ -33,27 +52,41 @@ visual language, and recognizable behavior.
 - `to-tickets <path>` requests integrating the pointed-out code. Incremental
   improvements are allowed, but the essence of the implementation must be
   preserved and the integration must not become a rewrite.
-- `grill-with docs <path>` requests evaluating a refactoring of the pointed-out
+- `grill-with-docs <path>` requests evaluating a refactoring of the pointed-out
   code via a `grill-me` session. Do not implement it until an explicit agreement
-  on scope, decisions, and validation points is reached with RaVN.
+  on scope, decisions, and validation points is reached with the User.
 - Apply improvements incrementally and atomically, preserving the functional
   state first.
 - Do not turn an integration into a rewrite without explicit authorization.
 - Outside this scope, `to-tickets` continues to be the normal expected behavior
   of the repository.
 
-## Global Helper Library (`global_fn.sh`)
+## Repository Structure & Purpose
+
+- `make/` - Modular Makefile system organizing operational targets by domain:
+  - `aliases.mk` - Convenient aliases and helper shortcuts.
+  - `docker.mk` - Container build and run automation.
+  - `git.mk` - Git workflow targets, worktree operations, and repository hygiene.
+  - `hooks.mk` - Git hooks management and local hook installation.
+  - `quality.mk` - Quality gate targets (formatting, linting, and verification).
+  - `release.mk` - Release preparation and versioning integration.
+- `tests/` - Automated test suite running behavioral contracts and unit checks for scripts and templates.
+- `docs/` - Architecture decision records (`docs/adr/`), domain glossary (`GLOSSARY.md`), and agent operational guidelines (`docs/agents/`: `issue-tracker.md`, `triage-labels.md`, `domain.md`).
+- `.git-hooks/` - Local Git hooks, including the pre-commit quality gate (shfmt and shellcheck enforcement).
+- `.github/` - GitHub Actions CI/CD workflows, issue templates, and pull request templates.
+- `Dockerfile` & `dockerfile.sh` - Reproducible, containerized execution baseline for development and verification.
+- `release-please-config.json` & `.release-please-manifest.json` - Automated changelog generation and semantic release management via Conventional Commits.
+
+## Modular Helpers & Script Organization
 
 > [!IMPORTANT]
-> **MANDATORY CHECK**: Before implementing any custom helper logic (such as git cloning, file downloading, retries, spinners, or status logging), you **MUST** inspect [global_fn.sh](Scripts/global_fn.sh) and reuse its existing helper functions (like `clone_or_update_repo` or `download_with_spinner`) instead of writing new custom shell routines.
+> **Code Reuse Over Duplication**: Before implementing any custom helper logic (such as git operations, logging, spinners, retries, or environment checks), inspect the existing helper modules within the repository and reuse them instead of writing one-off shell routines.
 
-Always prioritize the helper functions imported from [global_fn.sh](Scripts/global_fn.sh) over raw shell commands:
+When creating or modifying shell scripts, maintain clean separation of concerns:
 
-- **Logging:** Use `info`, `success`, `warn_msg`, `error_msg`, `step`, and `print_log` for unified, semantic output with visual indicators.
-- **Process Feedback:** Wrap long actions in `spin <pid> [msg]` or run them directly using `run_with_status "message" <command>` to show an interactive Braille spinner.
-- **Package Auditing:** Use `pkg_installed <package>` to check package status.
-- **Git & Downloads:** Use `clone_or_update_repo <name> <repo> <dest> [branch] [ssh]` and `download_file <url> [dest]` to perform downloads and cloning with built-in retry mechanisms and user feedback.
-- **Robustness:** Use `retry <tries> <command>` for actions prone to transient failures.
+- **Semantic Logging:** Provide clear, structured feedback for informational, warning, and error states rather than raw `echo` statements.
+- **Robustness & Retries:** For commands susceptible to transient network or I/O failures, implement structured retry logic.
+- **Pure Functions:** Prefer isolated, deterministic helper functions that take input as arguments and return predictable output or exit codes.
 
 ## Style
 
@@ -64,8 +97,8 @@ Always prioritize the helper functions imported from [global_fn.sh](Scripts/glob
 - Prefer `(( ))` over numeric operators inside `[[ ]]` (e.g., `(( count < 50 ))`, not `[[ $count -lt 50 ]]`).
 - For strings/paths with spaces, quote them instead of escaping spaces with a backslash (e.g., `"$APP_DIR/Disk Usage.desktop"`, not an unquoted path with escaped spaces).
 - Shebangs:
-  - Standard bash scripts must use `#!/usr/bin/env bash` consistently (never `#!/usr/bin/env sh`).
-  - Migration scripts executed via `sh` by the installer should use `#!/usr/bin/env sh` (or be POSIX compliant).
+  - Standard bash scripts must use `#!/usr/bin/env bash` consistently.
+  - Scripts intentionally designed for POSIX compliance should use `#!/usr/bin/env sh` or `#!/bin/sh`.
 - **`local` in functions**: every function-scoped variable must be declared with `local`. When the value comes from a command, declare the empty variable first and assign it on a separate line — never `local var=$(cmd)` on a single line, since it masks the command's exit code (SC2155). Correct example:
 
   ```bash
@@ -101,7 +134,7 @@ The **Quality Gate** is owned by the **pre-commit framework** as the sole Git **
 | ---------------------- | ----------------------------------------------------------------------------------------------- |
 | **File Hygiene Gate**  | large files, merge conflict markers, symlinks, structured-file checks, trailing whitespace, EOF |
 | **Doc Quality Gate**   | Strict Doc Profile via framework-managed `markdownlint-cli2` (not Docker)                       |
-| **Shell Quality Gate** | RaVN local hook `.git-hooks/ravn-shell-quality`: staged shell only, `shfmt` then `shellcheck`   |
+| **Shell Quality Gate** | Local hook `.git-hooks/ravn-shell-quality`: staged shell only, `shfmt` then `shellcheck`        |
 
 Shell details:
 
@@ -138,85 +171,53 @@ Do **not** use `SKIP_HOOKS=1` — it is retired and is not part of the contract.
 
 ### Manual (full-repo audit)
 
-To review beyond staged-only commits, e.g. before a release:
+To audit the repository beyond staged-only commits, e.g. before a release:
 
 ```bash
+# Full non-mutating quality check (File Hygiene + Doc Quality + Shell Quality + Tests)
+make verify
+
+# Or run non-mutating lint checks only:
+make lint
+
+# Or run all pre-commit hooks across the repository:
 pre-commit run --all-files
 
-# Or shell-only manual audit (diff only for shfmt):
-shellcheck Scripts/**/*.sh
-shfmt -i 2 -sr -kp -ci -d Scripts/
+# Or apply repository formatting rules:
+make format
 ```
-
-Note: `shellcheck Scripts/**/*.sh` needs `shopt -s globstar` in bash for deep recursion. Unlike the gate (`shfmt -w`), the manual `shfmt -d` command does not modify files.
-
-## Migrations
-
-- Located in `Scripts/migrations/`, named after version tags in `vYY.M.patch.sh` format (e.g., `v25.8.2.sh`) — the same versioning scheme used for release tags (see "Branching & Release Policy").
-- Migrations are run via `sh` inside `install.sh`. For shebang and POSIX-compliance requirements, see "Style" § Shebangs — do not restate those rules here.
-- Output brief details to stdout explaining what the migration is adjusting, so the user is informed during updates.
-
-## Configuration Tracking (`restore_cfg.psv`)
-
-`restore_cfg.psv` is the manifest that defines which files/directories are tracked between `Configs/` (repo) and `$HOME` (live system). It is the single source of truth consulted both by `restore_cfg.sh` (repo → `$HOME`, automatic) and by `ravn-dot` (bidirectional review — see "User Preferences" § Live Synchronization).
-
-1. **Adding files to tracking:** to add a configuration target to the restore system, insert a row using the format:
-
-   ```text
-   Flag|${HOME}/path/to/directory|file_name|dependency
-   ```
-
-   **Flags:**
-   - `P` (Populate/Preserve) - Copy target from `Configs/` to destination ONLY if it does not exist. Prevents overwriting local user changes.
-   - `S` (Sync) - Copy target from `Configs/` and overwrite local file.
-   - `O` (Overwrite) - Force overwrite. Overwrites everything recursively if the target is a directory.
-   - `B` (Backup) - Backs up the target before modifying.
-   - `I` (Install/Import) - Imports or configures associated packages.
-
-2. **Reviewing and syncing changes:** run `ravn-dot`. It reads `restore_cfg.psv` to determine which files are tracked, diffs each one between `Configs/` and `$HOME`, and presents an interactive `fzf` menu per differing file, where you can view the diff, resolve visually with `meld` or `nvim`, or choose which side to keep (repo → `$HOME` or `$HOME` → repo). This is the current, human-driven source of truth for reconciling drift — see "User Preferences" § Live Synchronization for how this fits into the agent's automated workflow.
-
-## User Preferences
-
-### Live Synchronization
-
-`Configs/` (repo) and `$HOME` (live system) must be kept in sync in both directions, but the tooling for each direction is different:
-
-- **repo → `$HOME`**: Whenever a file inside `Configs/` is changed, immediately synchronize it to its corresponding live path in `$HOME` — via `restore_cfg.sh` or a manual copy. `restore_cfg.sh` only supports this direction.
-- **`$HOME` → repo**: Whenever a file inside `$HOME` is changed and needs to be captured back into the repo (e.g., after live validation — see "Task Execution Workflow" § Phase 3), copy it back to its corresponding path in `Configs/`. There is no automated tool for this direction; `restore_cfg.psv` serves as the map/bridge between `$HOME` and `Configs/` paths and should guide which files to copy (see "Configuration Tracking").
-- **`ravn-dot`**: an interactive TUI (`fzf`-based) for reviewing and reconciling differences between `Configs/` and `$HOME` (see "Configuration Tracking" for details). It has no headless/non-interactive mode (only `--dry-run`), so **agents should not invoke it as part of an automated workflow** — it's a tool for manual human review, useful for auditing drift between repo and `$HOME` outside of a specific task.
-
-## Visual Changes
-
-- When making visual, style, or layout changes to **Waybar** (its different layouts/configs), always verify the result by taking and analyzing a screenshot before considering the change complete.
-  - **Capture command**: `hyde-shell screenshot m` (monitor screenshot, per `keybindings.conf`).
-  - **Save location**: at the agent's discretion (e.g., a temp path).
-  - **Cleanup**: the screenshot file **must always be deleted** after it has been analyzed — never leave capture artifacts behind.
-  - **Analysis**: the agent itself inspects the captured image directly (no separate review step by the user is implied by this rule).
-  - **Scope**: this rule is specific to Waybar and its layouts. It does not extend to other visual surfaces (GTK themes, SDDM, cursors, etc.) unless stated elsewhere.
 
 ## Git Worktree Workflow (Development)
 
-To protect the user's active system configurations from accidental resets or uncommitted code loss during development, and to maintain task isolation:
+### Issue completion cleanup
 
-> [!NOTE]
-> **Development paths** — two distinct locations are relevant:
->
-> - `Scripts/ravn/` — the RaVN engine source code, inside this repo (see "Repository Structure & Purpose").
-> - `/wt/dotfiles/master` (and other worktrees under `/wt/<repo>/`) — the **current, correct** location for all active development.
+After an issue is merged successfully into the base branch from which its
+worktree was created, the agent must verify that the issue is closed and then
+ask the user for explicit authorization before removing anything. With that
+authorization, remove the obsolete local and remote topic branch and remove
+the local issue worktree. Do not delete the base branch or its worktree, and do
+not perform cleanup after a failed, partial, or unverified merge.
 
-- **Isolated Development in `/wt/`**: All active development work must be carried out inside worktrees under `/wt/<repo>/` (which are created from the bare repository at `~/.local/share/git-bare/<repo>`).
-- **Automation Utilities** (all restored under `~/.local/bin/` — see "Repository Structure & Purpose" for their source in `Configs/.local/bin/`):
-  - `git-create-worktree` for general feature/chore branches.
-  - `git-issue-worktree` for GitHub-tracked issues.
+To protect the user's active development tree from accidental resets or uncommitted code loss during development, and to maintain strict task isolation:
+
+- **Isolated Development in `~/Work/`**: All active development work must be carried out inside isolated worktrees under `~/Work/<repo>/` (which are created from the bare repository at `~/.local/share/git-bare/<repo>`).
+- **No Direct Commits in Base Clones**: Do not perform feature development or commit changes directly inside the base repository worktree.
+
+- **Mandatory branch-baseline preflight**: Before creating a normal feature or chore branch from the base integration branch (e.g., `dev` or `master`), first run `git fetch origin --prune` and verify `git merge-base --is-ancestor origin/master origin/<base>`. A zero exit status means the released history is already present in the base branch. If it fails, update the base branch with `git merge --ff-only origin/master` from a clean base worktree, push it, fetch again, and repeat the ancestry check. This advances the branch reference without creating a direct commit or merge commit. If fast-forward is impossible, do not force it or derive new work: use an isolated synchronization branch and PR to resolve the divergence first. This prevents features from missing released behavior.
+
+- **Automation Utilities**: the worktree helpers must be available in `PATH`.
+  - **MANDATORY**: use `git-create-worktree` for general feature/chore branches.
+  - **MANDATORY**: use `git-issue-worktree` for GitHub-tracked issues.
+  - Do not create worktrees with raw `git worktree` commands or other ad-hoc procedures.
   - > [!IMPORTANT]
     > **MANDATORY**: `git-bare-clone` must always be used to create bare repositories (whether invoked via a `make` target or manually) — never create a bare repo with raw `git` commands. This is a recurring compliance gap: agents have created bare repos manually instead of using this script.
-- **Workflow Benefit**: Developing under `/wt/` isolates development changes from host configuration restoration processes. This eliminates the need to manually disable ravn tracking (e.g. setting `ravn=false` in `Scripts/ravn/config/packages.conf`) to protect local changes from being overwritten during installer or `restore_cfg.sh` runs.
+- **Workflow Benefit**: Developing under `~/Work/` ensures complete isolation between tasks, allowing concurrent development branches without untracked artifact contamination or uncommitted work collisions.
 
 ## Branching & Release Policy
 
 All changes must be created on temporary topic branches in isolated worktrees. **The following rules are non-negotiable and must be strictly followed by all agents and developers:**
 
-- **Temporary topic branches**: Create every change on a dedicated branch using `git-create-worktree`; push it to the remote and open a pull request.
+- **Temporary topic branches**: Create every change on a dedicated branch using `git-create-worktree` or `git-issue-worktree`; push it to the remote and open a pull request.
 - **`master`**: The integration branch. It must never receive direct commits. Merge all changes into `master` only through pull requests from remote topic branches.
 - **Merging**: Before merging, rebase the topic branch onto `origin/master`; do not merge `master` into the topic branch. After rebasing, update the remote branch only with `git push --force-with-lease`.
 
@@ -224,7 +225,7 @@ All changes must be created on temporary topic branches in isolated worktrees. *
 > **This policy is currently enforced by convention only, not by tooling.** The pre-commit hook (see "Verification") checks formatting/linting, but does **not** currently block direct commits to `master`. Until branch protection is implemented (at the hook level or via the git host), agents and developers must self-enforce this policy manually — treat it as strictly as if it were technically blocked.
 >
 > [!TIP]
-> **GitHub CLI (`gh`)**: always prefer `gh` for GitHub operations (issues, PRs, releases, repo metadata). **Do not use `gh repo sync`** — it can overwrite local changes and bypass the worktree isolation workflow. Use `git fetch` + `git rebase` instead for keeping branches up to date.
+> **GitHub CLI (`gh`)**: always prefer `gh` for GitHub operations (issues, PRs, releases, repo metadata). **Do not use `gh repo sync`** — it can overwrite local changes, discard commits, and bypass the worktree isolation workflow. Use `git fetch` + `git rebase` instead for keeping branches up to date.
 
 ## Task Planning & Skills Workflow (Matt Pocock Skills)
 
@@ -239,7 +240,7 @@ This repository mandates [Matt Pocock's engineering skills](https://github.com/m
 
 1. **Trivial / Administrative Tasks** — simple config changes (e.g., `.gitignore`, env var templates), doc typo fixes, minor dependency bumps.
    - **Fast-Track**: skip straight to `/implement`, then close with `/code-review`.
-2. **Engineering Tasks** — anything that alters, adds, or removes business logic, task modules, `restore_cfg.psv` schema, or architecture.
+2. **Engineering Tasks** — anything that alters, adds, or removes business logic, scripts, build targets, libraries, behavioral contracts, or architecture.
    - **Full Pipeline**: execute the 5-step chain below, sequentially, without exceptions.
 
 > [!IMPORTANT]
@@ -265,9 +266,19 @@ This is the official main flow of the Matt Pocock skills (per `ask-matt`'s routi
 |  4   | `/implement`       | Implement a piece of work from a spec or ticket, driving `/tdd` internally at agreed seams. Runs typechecking and tests regularly.         | Working code, tests passing. No "vibe coding."      |
 |  5   | `/code-review`     | Two-axis parallel review of the diff since a fixed point — Standards (repo conventions) and Spec (does it match the ticket/PRD).           | Side-by-side Standards vs. Spec report.             |
 
-**Standard review framing**: every invocation of `/code-review` in this repository must be framed with this literal instruction: `Review this repository as if you are blocking or approving a production PR.` This framing is mandatory and non-negotiable — it consistently produces a stricter, higher-signal review than a neutral "review this" prompt, and it is what's used everywhere `/code-review` is invoked in this repo (including "Task Execution Workflow" § Phase 4).
+> [!IMPORTANT]
+> **Standard review framing**: every invocation of `/code-review` in this repository must be framed with this literal instruction:
+>
+> ```text
+> Review this repository as if you are blocking or approving a production PR.
+> ```
+>
+> This framing is mandatory and non-negotiable — it consistently produces a stricter, higher-signal review than a neutral "review this" prompt, and it is what's used everywhere `/code-review` is invoked in this repo (including "Task Execution Workflow" § Phase 4).
 
-**Context hygiene** (per `ask-matt`): keep steps 1–3 in one unbroken context window — don't `/compact` or clear context until after `/to-tickets`, so grilling, spec, and tickets build on the same reasoning. Each `/implement` then starts fresh from the ticket. If a session approaches the model's effective reasoning window before `/to-tickets` is done, use `/handoff` rather than pushing on with degraded context.
+<!-- -->
+
+> [!NOTE]
+> **Context hygiene** (per `ask-matt`): keep steps 1–3 in one unbroken context window — don't `/compact` or clear context until after `/to-tickets`, so grilling, spec, and tickets build on the same reasoning. Each `/implement` then starts fresh from the ticket. If a session approaches the model's effective reasoning window before `/to-tickets` is done, use `/handoff` rather than pushing on with degraded context.
 
 ### Decision Tree
 
@@ -300,32 +311,24 @@ This is the official main flow of the Matt Pocock skills (per `ask-matt`'s routi
               │                    YES ────┘                          NO
               │                     │                                  │
               │              Keep grilling                             ▼
-              │              (same context                        /to-spec
-              │               window — no                              │
-              │               /compact yet)                            ▼
-              │                                          Multi-session build?
-              │                                       (per ask-matt, NOT "how
-              │                                        many files touched")
+              │              (same context)                         /to-spec
               │                                                        │
-              │                                        ┌───────────────┴───────────────┐
-              │                                        ▼                               ▼
-              │                                       NO                              YES
-              │                                        │                               │
-              │                                        ▼                               ▼
-              │                                  /implement                     /to-tickets
-              │                                  (same context                        │
-              │                                   window)                    /implement per ticket
-              │                                        │                    (fresh context each,
-              │                                        │                     via /handoff if needed)
-              └────────────────────┬───────────────────┴───────────────────────────────┘
-                                    ▼
-                              /code-review
+              │                                                        ▼
+              │                                                   /to-tickets
+              │                                                        │
+              │                                                        ▼
+              │                                                   /implement
+              │                                                  (fresh context each,
+              │                                                   via /handoff if needed)
+              └────────────────────┬───────────────────────────────────┘
+                                   ▼
+                             /code-review
                           (Standards + Spec)
-                                    │
-                                    ▼
-                       Commit → push → PR into `master`
-                    (never direct commits — see
-                     "Branching & Release Policy")
+                                   │
+                                   ▼
+                      Commit → push → PR into `master`
+                   (never direct commits — see
+                    "Branching & Release Policy")
 ```
 
 ### On-ramps
@@ -339,12 +342,12 @@ This is the official main flow of the Matt Pocock skills (per `ask-matt`'s routi
 - **Internal by Default**: The agent must drive this chain itself, internally, as its own default operating procedure — not as something it only does when explicitly asked to "use the skills" or "follow Matt Pocock's workflow." Treat every applicable task as if the chain were already silently invoked the moment work begins, the same way "Style" or "ShellCheck & Scripting Safety" apply without needing to be requested.
 - **Absolute Sequentiality**: Never run `/implement` for an Engineering Task unless a valid spec (`/to-spec`) and broken-down tickets (`/to-tickets`) already exist to back it up.
 - **No Skipping Under Pressure**: Time pressure, an urgent tone from the user, a "just do it quickly," or the agent's own confidence that it "already understands the task" are not valid reasons to bypass a step. If a step feels unnecessary, that feeling is itself the signal to check with the user (per "Task Sizing") rather than to quietly skip it.
-- **Verification is Non-Negotiable**: Do not claim a task is complete based on intuition. `/implement` and `/code-review` exit gates require deterministic proof (passing tests, successful builds, explicit terminal confirmation) — see "Verification" for the RaVN-specific lint/test commands that back this up.
+- **Verification is Non-Negotiable**: Do not claim a task is complete based on intuition. `/implement` and `/code-review` exit gates require deterministic proof (passing tests, successful builds, explicit terminal confirmation) — see "Verification" for the repository's lint and verification commands (`make verify`) that back this up.
 - **The Socratic Mandate**: During `/grill-with-docs`, do not be agreeable. Actively find flaws, missing requirements, and architectural conflicts _before_ a single line of production code is written.
 
-### How this fits with RaVN's own workflow
+### How this fits with the template workflow
 
-`/implement` (step 4) is where the generic Pocock flow meets RaVN-specific mechanics. "Task Execution Workflow" (below) is the detailed, repo-specific process — worktree isolation, package registration, config sync, Docker testing, live validation — that governs _how_ `/implement` and the surrounding steps actually get carried out in this repository. Read the two together: this section decides _which skills to invoke and when_; "Task Execution Workflow" defines _what happens inside each phase_ for RaVN specifically.
+`/implement` (step 4) is where the generic Pocock flow meets repository-specific mechanics. "Task Execution Workflow" (below) is the detailed, repo-specific process — worktree isolation, modular development, automated contracts, and containerized verification — that governs _how_ `/implement` and the surrounding steps actually get carried out in this repository. Read the two together: this section decides _which skills to invoke and when_; "Task Execution Workflow" defines _what happens inside each phase_ for this template.
 
 ## Task Execution Workflow
 
@@ -353,29 +356,27 @@ This is the official main flow of the Matt Pocock skills (per `ask-matt`'s routi
 
 ### Phase 1 — Environment & Task Setup
 
-1. **Create an isolated worktree** for the task via `git-create-worktree` (see "Git Worktree Workflow"). No direct commits to `master`.
-2. **Determine the best implementation approach** for the requested task. When feasible, prefer creating a task module under `Scripts/ravn/tasks/<category>/<NN>-<name>.sh` following the module contract (see [Scripts/ravn/AGENTS.md](Scripts/ravn/AGENTS.md) § Adding a task module); otherwise choose the most appropriate mechanism (script, config edit, migration, etc.).
-3. **Register new packages**, only if the task requires system packages:
-   - [Scripts/pkg_core.lst](Scripts/pkg_core.lst) — base packages installed for every user.
-   - [Scripts/pkg_extra.lst](Scripts/pkg_extra.lst) — optional packages the user can opt into.
+1. **Create an isolated issue worktree** whenever the user activates `/implement` for a GitHub issue. Use `git-issue-worktree` with the issue number, a descriptive slug, the active repository path, and the current base branch (`master`). For chores or tasks without GitHub issues, use `git-create-worktree`.
+   - Do not replace `git-issue-worktree` with a raw `git worktree` command or an absolute path to the helper.
+   - Record the base branch before implementation begins; that exact branch is the merge target later.
+   - Do not implement or commit changes directly in the base worktree.
+2. **Determine the best implementation approach** for the requested task. Decide on the proper architectural seam (e.g., helper function, modular script, Makefile target under `make/`, or test contract under `tests/`).
 
-   Add an accurate inline description in either case.
+### Phase 2 — Implementation & Engineering Standards
 
-### Phase 2 — Configuration & Synchronization
-
-1. **Update configuration templates** in `Configs/` (shell/zsh aliases, etc.) and add tracking rows to [restore_cfg.psv](Scripts/restore_cfg.psv) as needed (see "Configuration Tracking").
-2. **Sync `Configs/` → `$HOME`** immediately after every `Configs/` change (see "User Preferences" § Live Synchronization) — this is required to validate the change against the real, live environment in the next phase.
+1. **Follow the code and styling contracts**: adhere strictly to Bash 5 standards, strict variable quoting, separation of concerns, and pure functions (see "Style" and "Modular Helpers & Script Organization").
+2. **Handle errors defensively**: ensure commands in pipelines or substitutions that may return non-zero exit codes are protected with `|| true` or `|| echo ""` when running under strict shell options (`set -e` / `pipefail`).
 
 ### Phase 3 — Testing & Validation
 
-1. **Run lint and syntax checks** on all touched scripts: `shellcheck <file>`, `shfmt -i 2 -sr -kp -ci -d <file>`, and `bash -n <file>` (see "Verification").
-2. **Run an isolated Docker test** via [Scripts/ravn/test-task.sh](Scripts/ravn/test-task.sh) to validate the task in a clean `archlinux:latest` container (see [Scripts/ravn/AGENTS.md](Scripts/ravn/AGENTS.md) § Testing Tasks in Isolation).
-3. **Validate live in `$HOME`, then sync back to the repo**:
-   - Work and test directly against the live files in `$HOME` — this is the only place things like Waybar rendering or a Hyprland reload can actually be confirmed (see "Visual Changes" for the specific screenshot verification rule when Waybar/layouts are touched).
-   - Iterate until the change is 100% confirmed working and meets the user's requirements.
-   - Copy the validated final state from `$HOME` back into `Configs/` (see "User Preferences" § Live Synchronization, `$HOME` → repo direction), so that `$HOME` and the repo are in sync before pushing. `ravn-dot` may optionally be pointed to by the agent as a suggestion for the user to manually audit the sync afterward, but the agent itself should not depend on it (it's interactive-only).
+1. **Run lint and hygiene checks** on all touched files: execute `make lint` (or run `shellcheck` and `shfmt -i 2 -sr -kp -ci -d` on modified shell files). Ensure zero warnings or errors.
+2. **Run automated behavioral contracts**: execute `make test` to verify that existing and newly added behavioral tests pass in `tests/`.
+3. **Run full verification baseline**: execute `make verify` and, if applicable, validate the reproducible container build via `make docker-build`.
 
-### Phase 4 — Deployment
+### Phase 4 — Merge, Cleanup & Handoff
 
 1. **Run `/code-review`** against the fixed point where the worktree branched off, using the standard review framing (see "Task Planning & Skills Workflow" § The Main Build Chain) — Standards + Spec review. Resolve any Blocker/Major findings before proceeding.
-2. **Commit, push, and merge into `master`** via PR from a remote topic branch (see "Branching & Release Policy"). `master` must never receive direct commits.
+2. **Commit, push, and open a Pull Request**: format commits using Conventional Commits, push the topic branch to the remote, and open a PR targeting `master` (see "Branching & Release Policy"). `master` must never receive direct commits.
+3. **Synchronize the base worktree** after the PR merges, then verify the merged result and its clean status.
+4. **Clean up only after the merge is confirmed**: verify that the issue is closed on GitHub, and ask the user for explicit authorization before removing anything. Once authorized, remove the local and remote topic branch and delete the isolated worktree. Never delete `master`, the base branch, or unmerged work.
+5. **Give the user manual validation instructions**: explain the exact commands or steps to test the completed change. Then report that the base branch is ready for the next issue. Do not silently start the next issue in the same handoff.

@@ -2,6 +2,14 @@
 
 <!-- markdownlint-disable-file MD024 -->
 
+## [0.4.0](https://github.com/robert-flo/Template/compare/v0.3.0...v0.4.0) (2026-10-05)
+
+
+### Features
+
+* **git:** ✨ audit branch protection ([0f495be](https://github.com/robert-flo/Template/commit/0f495be743526502410a6b468282ab3af9ea519b))
+* **git:** ✨ audit branch protection ([aecba5c](https://github.com/robert-flo/Template/commit/aecba5c2697bfa00ca00131ef082398c6fd8a3ee))
+
 ## [0.3.0](https://github.com/robert-flo/dotfiles/compare/v0.2.0...v0.3.0) (2026-07-22)
 
 

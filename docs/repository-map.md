@@ -68,9 +68,9 @@ this map whenever an in-scope file is added, removed, or changes purpose.
 
 | File | Purpose and reason |
 | --- | --- |
-| \ | Defines the Antigravity PM agent for this repository (ADR 0001/0002 in antigravity-fleet). |
-| \ | Defines the Antigravity reviewer agent for this repository. |
-| \ | Defines the Antigravity worker agent for this repository. |
+| `.agents/agents/PM-rf-Template.md` | Defines the Antigravity PM agent for this repository (ADR 0001/0002 in antigravity-fleet). |
+| `.agents/agents/RV-rf-Template.md` | Defines the Antigravity reviewer agent for this repository. |
+| `.agents/agents/WK-rf-Template.md` | Defines the Antigravity worker agent for this repository. |
 | `docs/adr/0001-pre-commit-framework-as-quality-gate-entrypoint.md` | Records why pre-commit is the sole local quality-gate entrypoint. |
 | `docs/adr/0002-quality-gate-escape-hatches.md` | Defines the permitted, auditable ways to bypass quality checks when necessary. |
 | `docs/adr/0003-doc-quality-gate-without-docker.md` | Records the decision to lint documentation locally without a Docker dependency. |
